@@ -1,11 +1,12 @@
 {
-  "version": "8.6.0",
+  "version": "8.6.1",
   "release_date": "2026-09-05",
-  "id": "notice_hw_lab_v8.6",
-  "title_ur": "نیا وی آئی پی فیچر: ہارڈویئر ڈائیگنوسٹک لیب لائیو!",
-  "title_en": "NEW VIP FEATURE: Hardware Diagnostic Lab Live (v8.6)!",
-  "message_ur": "تمام معزز کلائنٹس کے لیے ہارڈویئر ڈائیگنوسٹک لیب (SUGON 3010PM / ملٹی میٹر / 6-پورٹ اسمارٹ فاسٹ چارجر) ٹول میں شامل کر دی گئی ہے۔",
-  "message_en": "HM Hardware Master Diagnostic Lab (SUGON 3010PM, UNI-T Multimeter, USB Doctor 6-Port Smart Fast Charger) is now live directly in your HM Testpoint Tool with full Urdu & English guides!",
+  "id": "notice_hw_lab_v8.6.1",
+  "title_ur": "نیا فیچر: آفیشل فیس بک گروپ اور ہارڈویئر لیب لائیو!",
+  "title_en": "NEW VIP UPDATE: Official Facebook Group & Hardware Lab Live!",
+  "message_ur": "تمام معزز کلائنٹس کے لیے ہارڈویئر ڈائیگنوسٹک لیب (SUGON 3010PM / ملٹی میٹر) اور آفیشل فیس بک گروپ کمیونٹی ٹول میں شامل کر دی گئی ہے۔ تمام ممبران گروپ جوائن کر سکتے ہیں۔",
+  "message_en": "HM Hardware Master Diagnostic Lab & Official Facebook Group Community are now live! Connect with technicians, ask questions, and get instant updates.",
+  "facebook_url": "https://www.facebook.com/share/g/19cb2CGd2a/",
   "has_hardware_lab": true,
-  "force_notice": false
+  "force_notice": true
 }
