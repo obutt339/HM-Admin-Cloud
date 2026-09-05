@@ -117,6 +117,31 @@ def generate_valid_key(hwid):
     h = hashlib.sha256(combined.encode('utf-8')).hexdigest().upper()
     return f"{h[0:4]}-{h[4:8]}-{h[8:12]}-{h[12:16]}"
 
+def is_valid_license_for_hwid(hwid, key):
+    if not key or not hwid:
+        return False
+    clean_k = key.replace("HMTP-", "").replace("TP-", "").replace("KEY-", "").replace("-", "").strip().upper()
+    if clean_k == "HMVIP":
+        return True
+    clean_hwid = hwid.replace("-", "").strip().upper()
+    
+    # 1. Official v8.5 Admin Dashboard Key
+    h1 = hashlib.sha256(f"{clean_hwid}_{SECRET_SALT}".encode('utf-8')).hexdigest().upper()[:16]
+    if clean_k == h1:
+        return True
+    
+    # 2. AIO Keygen Tab 2 (Testpoint v6.5 legacy TP-xxxx-xxxx-xxxx-xxxx)
+    h2 = hashlib.sha256(f"{clean_hwid}HM_TESTPOINT_SECRET_SALT".encode('utf-8')).hexdigest().upper()[:16]
+    if clean_k == h2:
+        return True
+
+    # 3. AIO Keygen Tab 1 (Testpoint Studio HMTP-xxxx-xxxx-xxxx-xxxx)
+    h3 = hashlib.sha256(f"{clean_hwid}|VIP_STUDIO_AUTH_2026_MASTER".encode('utf-8')).hexdigest().upper()[:16]
+    if clean_k == h3:
+        return True
+
+    return False
+
 def get_license_file_paths():
     app_dir = get_app_dir()
     return [
@@ -127,16 +152,13 @@ def get_license_file_paths():
 
 def check_is_registered():
     hwid = get_hwid()
-    expected = generate_valid_key(hwid)
-    clean_expected = expected.replace("HMTP-", "").replace("-", "").strip()
     for p in get_license_file_paths():
         if not os.path.exists(p):
             continue
         try:
             with open(p, 'r', encoding='utf-8') as f:
                 content = f.read().strip().upper()
-            clean_content = content.replace("HMTP-", "").replace("-", "").strip()
-            if clean_content == clean_expected or content == expected or clean_content == "HMVIP":
+            if is_valid_license_for_hwid(hwid, content):
                 return True
         except Exception:
             pass
@@ -269,10 +291,8 @@ class HMActivationDialog:
 
     def do_activate(self):
         k = self.ent_key.get().strip().upper()
-        clean_k = k.replace("HMTP-", "").replace("-", "").strip()
-        clean_expected = self.expected_key.replace("HMTP-", "").replace("-", "").strip()
-        if clean_k == clean_expected or k == self.expected_key or clean_k == "HMVIP":
-            save_license_key(self.expected_key)
+        if is_valid_license_for_hwid(self.hwid, k):
+            save_license_key(k)
             self.success = True
             messagebox.showinfo("Activated", "Activation Successful! Welcome to HM Testpoint VIP Suite.", parent=self.root)
             self.root.destroy()
