@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import os
 import sys
 
@@ -125,19 +125,24 @@ def is_valid_license_for_hwid(hwid, key):
         return True
     clean_hwid = hwid.replace("-", "").strip().upper()
     
-    # 1. Official v8.5 Admin Dashboard Key
-    h1 = hashlib.sha256(f"{clean_hwid}_{SECRET_SALT}".encode('utf-8')).hexdigest().upper()[:16]
-    if clean_k == h1:
-        return True
-    
-    # 2. AIO Keygen Tab 2 (Testpoint v6.5 legacy TP-xxxx-xxxx-xxxx-xxxx)
-    h2 = hashlib.sha256(f"{clean_hwid}HM_TESTPOINT_SECRET_SALT".encode('utf-8')).hexdigest().upper()[:16]
-    if clean_k == h2:
+    # 1. Standalone Keygen / v6.5 & v8.5 Standard (colon format hwid:salt)
+    h_std = hashlib.sha256(f"{clean_hwid}:{SECRET_SALT}".encode('utf-8')).hexdigest().upper()[:16]
+    if clean_k == h_std:
         return True
 
+    # 2. Underscore format (hwid_salt)
+    h_under = hashlib.sha256(f"{clean_hwid}_{SECRET_SALT}".encode('utf-8')).hexdigest().upper()[:16]
+    if clean_k == h_under:
+        return True
+    
     # 3. AIO Keygen Tab 1 (Testpoint Studio HMTP-xxxx-xxxx-xxxx-xxxx)
-    h3 = hashlib.sha256(f"{clean_hwid}|VIP_STUDIO_AUTH_2026_MASTER".encode('utf-8')).hexdigest().upper()[:16]
-    if clean_k == h3:
+    h_tab1 = hashlib.sha256(f"{clean_hwid}|VIP_STUDIO_AUTH_2026_MASTER".encode('utf-8')).hexdigest().upper()[:16]
+    if clean_k == h_tab1:
+        return True
+
+    # 4. Legacy AIO Tab 2 (hwidHM_TESTPOINT_SECRET_SALT)
+    h_leg = hashlib.sha256(f"{clean_hwid}HM_TESTPOINT_SECRET_SALT".encode('utf-8')).hexdigest().upper()[:16]
+    if clean_k == h_leg:
         return True
 
     return False
