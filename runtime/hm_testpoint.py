@@ -213,7 +213,8 @@ class HMActivationDialog:
         btn_row.pack(fill=tk.X, pady=2)
 
         tk.Button(btn_row, text="⚡ ACTIVATE SOFTWARE", font=("Segoe UI", 10, "bold"), bg="#00c853", fg="#000", bd=0, pady=8, cursor="hand2", command=self.do_activate).pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
-        tk.Button(btn_row, text="📲 Contact WhatsApp", font=("Segoe UI", 9, "bold"), bg="#25d366", fg="#fff", bd=0, pady=8, cursor="hand2", command=self.open_whatsapp).pack(side=tk.RIGHT, padx=(5, 0))
+        tk.Button(btn_row, text="📲 WhatsApp", font=("Segoe UI", 9, "bold"), bg="#25d366", fg="#fff", bd=0, pady=8, cursor="hand2", command=self.open_whatsapp).pack(side=tk.LEFT, padx=(5, 5))
+        tk.Button(btn_row, text="🌐 FB Group", font=("Segoe UI", 9, "bold"), bg="#1877f2", fg="#fff", bd=0, pady=8, cursor="hand2", command=lambda: webbrowser.open("https://www.facebook.com/share/g/19cb2CGd2a/")).pack(side=tk.RIGHT, padx=(5, 0))
 
         # Check cloud auto activate automatically after 400ms
         self.root.after(400, lambda: self.check_cloud_auto_activate(silent=True))
@@ -644,6 +645,14 @@ class HMTestpointApp:
         right.pack(side=tk.RIGHT, fill=tk.Y, padx=15)
         tk.Label(right, text="👤 Hassan Javed (0344-1545807)", font=("Segoe UI", 9, "bold"), fg=UT_STYLE['accent_green'], bg=UT_STYLE['bg_header']).pack(side=tk.LEFT, padx=8)
 
+        btn_fb = tk.Button(
+            right, text="🌐 Facebook Group", font=("Segoe UI", 9, "bold"),
+            bg="#1877f2", fg="#ffffff", activebackground="#166fe5", activeforeground="#ffffff",
+            bd=0, padx=8, pady=2, cursor="hand2",
+            command=self.open_facebook_group
+        )
+        btn_fb.pack(side=tk.LEFT, padx=4)
+
         btn_notice = tk.Button(
             right, text="🔔 VIP Notice", font=("Segoe UI", 9, "bold"),
             bg="#f57f17", fg="#000000", activebackground="#ffb300", activeforeground="#000000",
@@ -678,6 +687,12 @@ class HMTestpointApp:
 
         btn_sc = tk.Button(right, text="📌 Desktop Shortcut", font=("Segoe UI", 8, "bold"), bg="#303548", fg=UT_STYLE['accent_yellow'], bd=0, padx=8, pady=2, cursor="hand2", command=self.manual_create_shortcut)
         btn_sc.pack(side=tk.LEFT, padx=4)
+
+    def open_facebook_group(self):
+        try:
+            webbrowser.open("https://www.facebook.com/share/g/19cb2CGd2a/")
+        except Exception:
+            pass
 
     def open_adb_codes_modal(self):
         top = tk.Toplevel(self.root)
@@ -955,6 +970,9 @@ class HMTestpointApp:
         btn_tab = tk.Button(b_box, text="🔬 VIEW IN TOOL (TAB)", font=("Segoe UI", 9, "bold"), bg="#0288d1", fg="#ffffff", activebackground="#03a9f4", activeforeground="#ffffff", bd=0, padx=14, pady=8, cursor="hand2", command=view_tab_action)
         btn_tab.pack(side=tk.LEFT, padx=6)
 
+        btn_fb_notice = tk.Button(b_box, text="🌐 JOIN FB GROUP", font=("Segoe UI", 9, "bold"), bg="#1877f2", fg="#ffffff", activebackground="#166fe5", activeforeground="#ffffff", bd=0, padx=12, pady=8, cursor="hand2", command=self.open_facebook_group)
+        btn_fb_notice.pack(side=tk.LEFT, padx=6)
+
         btn_close = tk.Button(b_box, text="✖ Got It / Close", font=("Segoe UI", 9, "bold"), bg="#252736", fg="#94a3b8", activebackground="#383d52", activeforeground="#ffffff", bd=0, padx=14, pady=8, cursor="hand2", command=close_and_dismiss)
         btn_close.pack(side=tk.RIGHT)
 
@@ -1046,6 +1064,14 @@ class HMTestpointApp:
             command=self.launch_cloud_updater
         )
         btn_sync_tab.pack(side=tk.RIGHT, padx=4)
+
+        btn_fb_tab = tk.Button(
+            inner, text="🌐 OFFICIAL FB GROUP", font=("Segoe UI", 9, "bold"),
+            bg="#1877f2", fg="#ffffff", activebackground="#166fe5", activeforeground="#ffffff",
+            bd=0, relief=tk.FLAT, padx=12, pady=4, cursor="hand2",
+            command=self.open_facebook_group
+        )
+        btn_fb_tab.pack(side=tk.RIGHT, padx=4)
 
     def build_workspace(self):
         ws = tk.Frame(self.root, bg=UT_STYLE['bg_window'])
@@ -1163,6 +1189,10 @@ class HMTestpointApp:
 
         self.lbl_zoom_info = tk.Label(sbar, text="Resolution: 0x0 | Zoom: 100% | Rotation: 0°", font=("Segoe UI", 8), fg=UT_STYLE['accent_orange'], bg=UT_STYLE['bg_header'])
         self.lbl_zoom_info.pack(side=tk.LEFT, padx=30)
+
+        lbl_fb_bar = tk.Label(sbar, text="🌐 Official FB Group", font=("Segoe UI", 8, "bold underline"), fg="#38bdf8", bg=UT_STYLE['bg_header'], cursor="hand2")
+        lbl_fb_bar.pack(side=tk.RIGHT, padx=(0, 10))
+        lbl_fb_bar.bind("<Button-1>", lambda e: self.open_facebook_group())
 
         tk.Label(sbar, text="Developed by Hassan Javed | WhatsApp: 0344-1545807", font=("Segoe UI", 8, "bold"), fg=UT_STYLE['accent_green'], bg=UT_STYLE['bg_header']).pack(side=tk.RIGHT, padx=12)
 
