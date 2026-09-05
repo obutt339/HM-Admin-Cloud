@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+﻿# -*- coding: utf-8 -*-
 import os
 import sys
 
@@ -2496,12 +2496,27 @@ class HMTestpointApp:
 
             # Real Instrument Photo Showcase Box
             if img_file:
+                default_asset_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets")
                 p_paths = [
-                    os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", img_file),
+                    os.path.join(default_asset_dir, img_file),
                     os.path.join(get_app_dir(), "assets", img_file),
                     os.path.join(r"C:\HM_Toolkits\assets", img_file)
                 ]
                 found_p = next((p for p in p_paths if os.path.exists(p)), None)
+                if not found_p:
+                    try:
+                        os.makedirs(default_asset_dir, exist_ok=True)
+                        target_f = os.path.join(default_asset_dir, img_file)
+                        cdn_img_url = f"https://raw.githubusercontent.com/obutt339/HM-Admin-Cloud/main/assets/{img_file}"
+                        req = urllib.request.Request(cdn_img_url, headers={'User-Agent': 'Mozilla/5.0 HM-Client'})
+                        with urllib.request.urlopen(req, timeout=8) as resp:
+                            if resp.status == 200:
+                                with open(target_f, "wb") as out_f:
+                                    out_f.write(resp.read())
+                                found_p = target_f
+                    except Exception:
+                        pass
+
                 if found_p:
                     try:
                         im = Image.open(found_p)
