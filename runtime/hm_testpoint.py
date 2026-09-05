@@ -622,6 +622,20 @@ class HMTestpointApp:
                 except Exception:
                     pass
 
+        # Load Facebook Logo PhotoImages
+        self.fb_photo_18 = None
+        self.fb_photo_22 = None
+        try:
+            for d in [os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets"), os.path.join(get_app_dir(), "assets"), r"C:\HM_Toolkits\assets"]:
+                p18 = os.path.join(d, "fb_icon_18.png")
+                if os.path.exists(p18) and not self.fb_photo_18:
+                    self.fb_photo_18 = ImageTk.PhotoImage(Image.open(p18))
+                p22 = os.path.join(d, "fb_icon_22.png")
+                if os.path.exists(p22) and not self.fb_photo_22:
+                    self.fb_photo_22 = ImageTk.PhotoImage(Image.open(p22))
+        except Exception:
+            pass
+
     def build_gui(self):
         self.build_top_header()
         self.build_two_row_brand_grid()
@@ -645,12 +659,21 @@ class HMTestpointApp:
         right.pack(side=tk.RIGHT, fill=tk.Y, padx=15)
         tk.Label(right, text="👤 Hassan Javed (0344-1545807)", font=("Segoe UI", 9, "bold"), fg=UT_STYLE['accent_green'], bg=UT_STYLE['bg_header']).pack(side=tk.LEFT, padx=8)
 
-        btn_fb = tk.Button(
-            right, text="🌐 Facebook Group", font=("Segoe UI", 9, "bold"),
-            bg="#1877f2", fg="#ffffff", activebackground="#166fe5", activeforeground="#ffffff",
-            bd=0, padx=8, pady=2, cursor="hand2",
-            command=self.open_facebook_group
-        )
+        if self.fb_photo_18:
+            btn_fb = tk.Button(
+                right, image=self.fb_photo_18, text=" Facebook Group", compound=tk.LEFT,
+                font=("Segoe UI", 9, "bold"), bg="#1877f2", fg="#ffffff",
+                activebackground="#166fe5", activeforeground="#ffffff",
+                bd=0, padx=8, pady=2, cursor="hand2",
+                command=self.open_facebook_group
+            )
+        else:
+            btn_fb = tk.Button(
+                right, text="🌐 Facebook Group", font=("Segoe UI", 9, "bold"),
+                bg="#1877f2", fg="#ffffff", activebackground="#166fe5", activeforeground="#ffffff",
+                bd=0, padx=8, pady=2, cursor="hand2",
+                command=self.open_facebook_group
+            )
         btn_fb.pack(side=tk.LEFT, padx=4)
 
         btn_notice = tk.Button(
@@ -970,7 +993,10 @@ class HMTestpointApp:
         btn_tab = tk.Button(b_box, text="🔬 VIEW IN TOOL (TAB)", font=("Segoe UI", 9, "bold"), bg="#0288d1", fg="#ffffff", activebackground="#03a9f4", activeforeground="#ffffff", bd=0, padx=14, pady=8, cursor="hand2", command=view_tab_action)
         btn_tab.pack(side=tk.LEFT, padx=6)
 
-        btn_fb_notice = tk.Button(b_box, text="🌐 JOIN FB GROUP", font=("Segoe UI", 9, "bold"), bg="#1877f2", fg="#ffffff", activebackground="#166fe5", activeforeground="#ffffff", bd=0, padx=12, pady=8, cursor="hand2", command=self.open_facebook_group)
+        if self.fb_photo_22:
+            btn_fb_notice = tk.Button(b_box, image=self.fb_photo_22, text=" JOIN FB GROUP", compound=tk.LEFT, font=("Segoe UI", 9, "bold"), bg="#1877f2", fg="#ffffff", activebackground="#166fe5", activeforeground="#ffffff", bd=0, padx=12, pady=6, cursor="hand2", command=self.open_facebook_group)
+        else:
+            btn_fb_notice = tk.Button(b_box, text="🌐 JOIN FB GROUP", font=("Segoe UI", 9, "bold"), bg="#1877f2", fg="#ffffff", activebackground="#166fe5", activeforeground="#ffffff", bd=0, padx=12, pady=8, cursor="hand2", command=self.open_facebook_group)
         btn_fb_notice.pack(side=tk.LEFT, padx=6)
 
         btn_close = tk.Button(b_box, text="✖ Got It / Close", font=("Segoe UI", 9, "bold"), bg="#252736", fg="#94a3b8", activebackground="#383d52", activeforeground="#ffffff", bd=0, padx=14, pady=8, cursor="hand2", command=close_and_dismiss)
@@ -1065,12 +1091,21 @@ class HMTestpointApp:
         )
         btn_sync_tab.pack(side=tk.RIGHT, padx=4)
 
-        btn_fb_tab = tk.Button(
-            inner, text="🌐 OFFICIAL FB GROUP", font=("Segoe UI", 9, "bold"),
-            bg="#1877f2", fg="#ffffff", activebackground="#166fe5", activeforeground="#ffffff",
-            bd=0, relief=tk.FLAT, padx=12, pady=4, cursor="hand2",
-            command=self.open_facebook_group
-        )
+        if self.fb_photo_18:
+            btn_fb_tab = tk.Button(
+                inner, image=self.fb_photo_18, text=" OFFICIAL FB GROUP", compound=tk.LEFT,
+                font=("Segoe UI", 9, "bold"), bg="#1877f2", fg="#ffffff",
+                activebackground="#166fe5", activeforeground="#ffffff",
+                bd=0, relief=tk.FLAT, padx=12, pady=3, cursor="hand2",
+                command=self.open_facebook_group
+            )
+        else:
+            btn_fb_tab = tk.Button(
+                inner, text="🌐 OFFICIAL FB GROUP", font=("Segoe UI", 9, "bold"),
+                bg="#1877f2", fg="#ffffff", activebackground="#166fe5", activeforeground="#ffffff",
+                bd=0, relief=tk.FLAT, padx=12, pady=4, cursor="hand2",
+                command=self.open_facebook_group
+            )
         btn_fb_tab.pack(side=tk.RIGHT, padx=4)
 
     def build_workspace(self):
@@ -1190,7 +1225,10 @@ class HMTestpointApp:
         self.lbl_zoom_info = tk.Label(sbar, text="Resolution: 0x0 | Zoom: 100% | Rotation: 0°", font=("Segoe UI", 8), fg=UT_STYLE['accent_orange'], bg=UT_STYLE['bg_header'])
         self.lbl_zoom_info.pack(side=tk.LEFT, padx=30)
 
-        lbl_fb_bar = tk.Label(sbar, text="🌐 Official FB Group", font=("Segoe UI", 8, "bold underline"), fg="#38bdf8", bg=UT_STYLE['bg_header'], cursor="hand2")
+        if self.fb_photo_18:
+            lbl_fb_bar = tk.Label(sbar, image=self.fb_photo_18, text=" Official FB Group", compound=tk.LEFT, font=("Segoe UI", 8, "bold underline"), fg="#38bdf8", bg=UT_STYLE['bg_header'], cursor="hand2")
+        else:
+            lbl_fb_bar = tk.Label(sbar, text="🌐 Official FB Group", font=("Segoe UI", 8, "bold underline"), fg="#38bdf8", bg=UT_STYLE['bg_header'], cursor="hand2")
         lbl_fb_bar.pack(side=tk.RIGHT, padx=(0, 10))
         lbl_fb_bar.bind("<Button-1>", lambda e: self.open_facebook_group())
 
