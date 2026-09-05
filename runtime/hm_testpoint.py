@@ -1,4 +1,4 @@
-﻿# -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 import os
 import sys
 
@@ -2429,11 +2429,14 @@ class HMTestpointApp:
         for col in range(3):
             cards_wrap.grid_columnconfigure(col, weight=1, uniform="hw_card")
 
+        self.hw_photos = []
+
         card_data = [
             (
                 "⚡ SUGON 3010PM (DC SUPPLY)",
                 "#b71c1c",
                 "30V / 10A High Precision Digital Display",
+                "sugon_3010pm.jpg",
                 [
                     ("Full Short (VBAT/VPH):", "0.00V | 5.00A", "فل شارٹ - بیپ اور ہیٹ (VPH شارٹ)"),
                     ("Half Short / Leakage:", "4.20V | 0.22A", "ہاف شارٹ - فون گرم یا بیٹری جلدی ختم"),
@@ -2448,6 +2451,7 @@ class HMTestpointApp:
                 "📟 UNI-T UT33B+ MULTIMETER",
                 "#0288d1",
                 "Digital Precision Multi-Tester Mode",
+                "unit_ut33b.jpg",
                 [
                     ("Diode Testing Mode:", "0.350V - 0.700V", "نارمل لائن ڈراپ (ریڈ پروب گراؤنڈ پر رکھیں)"),
                     ("Short to Ground (Buzzer):", "0.000V / 0 Ω", "لائن شارٹ ہے - بیپ کی آواز آئے گی"),
@@ -2462,6 +2466,7 @@ class HMTestpointApp:
                 "🔌 USB DOCTOR & SMART CHARGER",
                 "#2e7d32",
                 "6-Port Smart Fast Charger & QC3.0",
+                None,
                 [
                     ("Normal Fast Charge:", "5.0V | 1.85A", "نارمل فاسٹ چارجنگ ایکٹو ہے (OK)"),
                     ("QC 3.0 High Voltage:", "9.0V | 1.60A", "کوئیک چارج ہینڈ شیک کامیاب ہے"),
@@ -2474,7 +2479,7 @@ class HMTestpointApp:
             )
         ]
 
-        for idx, (title, color, subtitle, items, note) in enumerate(card_data):
+        for idx, (title, color, subtitle, img_file, items, note) in enumerate(card_data):
             card = tk.Frame(cards_wrap, bg="#131622", bd=1, relief=tk.SOLID)
             card.grid(row=0, column=idx, sticky="nsew", padx=6, pady=6)
 
@@ -2488,6 +2493,29 @@ class HMTestpointApp:
             body_c.pack(fill=tk.BOTH, expand=True)
 
             tk.Label(body_c, text=subtitle, font=("Segoe UI", 8, "bold"), fg="#ffb300", bg="#131622").pack(anchor="w", pady=(0, 6))
+
+            # Real Instrument Photo Showcase Box
+            if img_file:
+                p_paths = [
+                    os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", img_file),
+                    os.path.join(get_app_dir(), "assets", img_file),
+                    os.path.join(r"C:\HM_Toolkits\assets", img_file)
+                ]
+                found_p = next((p for p in p_paths if os.path.exists(p)), None)
+                if found_p:
+                    try:
+                        im = Image.open(found_p)
+                        im.thumbnail((160, 160), Image.Resampling.LANCZOS)
+                        p_photo = ImageTk.PhotoImage(im)
+                        self.hw_photos.append(p_photo)
+
+                        p_box = tk.Frame(body_c, bg="#07090e", bd=1, relief=tk.SOLID, height=165)
+                        p_box.pack(fill=tk.X, pady=(0, 8))
+                        p_box.pack_propagate(False)
+
+                        tk.Label(p_box, image=p_photo, bg="#07090e").pack(expand=True)
+                    except Exception:
+                        pass
 
             # Table of readings
             t_frame = tk.Frame(body_c, bg="#0d0f18", bd=1, relief=tk.SOLID)
