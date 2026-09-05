@@ -1,1 +1,30 @@
-[{"Id":"HM-101","CustomerName":"HM Mobile Shop","Phone":"03246908385","HWID":"494F-7607-989D-D48C","LicenseKey":"537B-E657-1736-0D13","Plan":"Lifetime License","Price":2500,"ActivationDate":"2026-08-28 14:39","ExpiryDate":"2076-08-28","Status":"Active","Notes":"Easypaisa","LastSeen":"2026-08-28 14:39"}]
+[
+  {
+    "Id": "HM-101",
+    "CustomerName": "HM Mobile Shop",
+    "Phone": "03246908385",
+    "HWID": "494F-7607-989D-D48C",
+    "LicenseKey": "537B-E657-1736-0D13",
+    "Plan": "Lifetime License",
+    "Price": 2500,
+    "ActivationDate": "2026-08-28 14:39",
+    "ExpiryDate": "2076-08-28",
+    "Status": "Active",
+    "Notes": "Easypaisa",
+    "LastSeen": "2026-08-28 14:39"
+  },
+  {
+    "Id": "HM-102",
+    "CustomerName": "VIP Customer",
+    "Phone": "0344-1545807",
+    "HWID": "7B3C0B03351011E18F3B24C45F06E081",
+    "LicenseKey": "43B3-3254-D7FF-1EAA",
+    "Plan": "Lifetime VIP",
+    "Price": 2500,
+    "ActivationDate": "2026-09-05 13:25",
+    "ExpiryDate": "2076-09-05",
+    "Status": "Active",
+    "Notes": "Auto-Activated via Cloud by Hassan Mobile",
+    "LastSeen": "2026-09-05 13:25"
+  }
+]
