@@ -34,6 +34,9 @@ powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [N
 echo [*] Downloading UNI-T UT33B+ Multimeter Photo...
 powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object Net.WebClient).DownloadFile('https://raw.githubusercontent.com/obutt339/HM-Admin-Cloud/main/assets/unit_ut33b.jpg', '%TARGET_DIR%\assets\unit_ut33b.jpg')"
 
+echo [*] Downloading Official Facebook Logos...
+powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $wc = New-Object Net.WebClient; $wc.DownloadFile('https://raw.githubusercontent.com/obutt339/HM-Admin-Cloud/main/assets/fb_logo.png', '%TARGET_DIR%\assets\fb_logo.png'); $wc.DownloadFile('https://raw.githubusercontent.com/obutt339/HM-Admin-Cloud/main/assets/fb_icon_18.png', '%TARGET_DIR%\assets\fb_icon_18.png'); $wc.DownloadFile('https://raw.githubusercontent.com/obutt339/HM-Admin-Cloud/main/assets/fb_icon_22.png', '%TARGET_DIR%\assets\fb_icon_22.png')"
+
 echo [*] Downloading latest hm_testpoint.py (Hardware Lab + Photos + UTF-8 Fix)...
 powershell -NoProfile -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; (New-Object Net.WebClient).DownloadFile('https://raw.githubusercontent.com/obutt339/HM-Admin-Cloud/main/runtime/hm_testpoint.py', '%TARGET_DIR%\hm_testpoint.py')"
 
