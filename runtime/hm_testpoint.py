@@ -1,5 +1,15 @@
+﻿# -*- coding: utf-8 -*-
 import os
 import sys
+
+os.environ["PYTHONIOENCODING"] = "utf-8"
+os.environ["PYTHONUTF8"] = "1"
+if hasattr(sys, 'reconfigure'):
+    try:
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+    except Exception:
+        pass
 
 _cur = os.path.dirname(os.path.abspath(__file__))
 if _cur not in sys.path:
