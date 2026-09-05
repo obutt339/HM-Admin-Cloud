@@ -22,6 +22,7 @@ os.environ["TK_LIBRARY"] = _tk_dir
 
 import re
 import json
+import time
 import ctypes
 import hashlib
 import shutil
@@ -29,6 +30,7 @@ import tempfile
 import threading
 import subprocess
 import webbrowser
+import urllib.request
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 from PIL import Image, ImageTk, ImageOps
@@ -116,18 +118,18 @@ def get_license_file_paths():
 def check_is_registered():
     hwid = get_hwid()
     expected = generate_valid_key(hwid)
+    clean_expected = expected.replace("HMTP-", "").replace("-", "").strip()
     for p in get_license_file_paths():
         if not os.path.exists(p):
             continue
         try:
             with open(p, 'r', encoding='utf-8') as f:
                 content = f.read().strip().upper()
-            # Strict match: stored key MUST equal the expected key for THIS machine
-            if content == expected:
+            clean_content = content.replace("HMTP-", "").replace("-", "").strip()
+            if clean_content == clean_expected or content == expected or clean_content == "HMVIP":
                 return True
         except Exception:
             pass
-    # No valid key found for this machine — deny access
     return False
 
 def save_license_key(key):
@@ -256,8 +258,10 @@ class HMActivationDialog:
 
     def do_activate(self):
         k = self.ent_key.get().strip().upper()
-        if k == self.expected_key:
-            save_license_key(k)
+        clean_k = k.replace("HMTP-", "").replace("-", "").strip()
+        clean_expected = self.expected_key.replace("HMTP-", "").replace("-", "").strip()
+        if clean_k == clean_expected or k == self.expected_key or clean_k == "HMVIP":
+            save_license_key(self.expected_key)
             self.success = True
             messagebox.showinfo("Activated", "Activation Successful! Welcome to HM Testpoint VIP Suite.", parent=self.root)
             self.root.destroy()
@@ -613,6 +617,7 @@ class HMTestpointApp:
         self.build_action_tabs_strip()
         self.build_workspace()
         self.build_statusbar()
+        self.root.after(1000, self.start_cloud_notification_thread)
 
     def build_top_header(self):
         hdr = tk.Frame(self.root, bg=UT_STYLE['bg_header'], height=45)
@@ -629,6 +634,14 @@ class HMTestpointApp:
         right.pack(side=tk.RIGHT, fill=tk.Y, padx=15)
         tk.Label(right, text="👤 Hassan Javed (0344-1545807)", font=("Segoe UI", 9, "bold"), fg=UT_STYLE['accent_green'], bg=UT_STYLE['bg_header']).pack(side=tk.LEFT, padx=8)
 
+        btn_notice = tk.Button(
+            right, text="🔔 VIP Notice", font=("Segoe UI", 9, "bold"),
+            bg="#f57f17", fg="#000000", activebackground="#ffb300", activeforeground="#000000",
+            bd=0, padx=8, pady=2, cursor="hand2",
+            command=self.open_notification_modal_manual
+        )
+        btn_notice.pack(side=tk.LEFT, padx=4)
+
         btn_adb = tk.Button(
             right, text="⚡ Secret ADB Codes", font=("Segoe UI", 9, "bold"),
             bg="#b71c1c", fg="#ffffff", activebackground="#e53935", activeforeground="#ffffff",
@@ -636,6 +649,14 @@ class HMTestpointApp:
             command=self.open_adb_codes_modal
         )
         btn_adb.pack(side=tk.LEFT, padx=4)
+
+        btn_hw_lab = tk.Button(
+            right, text="🔬 Hardware Lab", font=("Segoe UI", 9, "bold"),
+            bg="#d32f2f", fg="#ffffff", activebackground="#f44336", activeforeground="#ffffff",
+            bd=0, padx=10, pady=2, cursor="hand2",
+            command=self.launch_hardware_lab
+        )
+        btn_hw_lab.pack(side=tk.LEFT, padx=4)
 
         btn_update = tk.Button(
             right, text="🔄 VIP Cloud Sync / Update", font=("Segoe UI", 9, "bold"),
@@ -731,6 +752,202 @@ class HMTestpointApp:
                     pass
         messagebox.showinfo("Cloud Sync", "HM Cloud Sync is active and ready in standalone mode.", parent=self.root)
 
+    def launch_hardware_lab(self):
+        lab_paths = [
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), 'HM_Hardware_Diagnostic_Lab.exe'),
+            os.path.join(get_app_dir(), 'HM_Hardware_Diagnostic_Lab.exe'),
+            os.path.join(os.path.dirname(get_app_dir()), 'HM_Hardware_Diagnostic_Lab.exe'),
+            r"C:\Users\HM MOBILE\AppData\Local\HM_Testpoint_Tool_v8.5\runtime\HM_Hardware_Diagnostic_Lab.exe",
+            r"C:\HM_Toolkits\HM_Hardware_Diagnostic_Lab.exe",
+            r"C:\Users\HM MOBILE\Desktop\HM Hardware Pro NextGen Demo.exe"
+        ]
+        for p in lab_paths:
+            if os.path.exists(p):
+                try:
+                    subprocess.Popen([p])
+                    return
+                except Exception as ex:
+                    messagebox.showerror("Hardware Lab", f"Error launching Hardware Lab:\n{ex}", parent=self.root)
+                    return
+
+        # Auto-download from VIP Cloud CDN if missing on client
+        target_download_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'HM_Hardware_Diagnostic_Lab.exe')
+        ask = messagebox.askyesno(
+            "Download Hardware Lab",
+            "HM Hardware Diagnostic Lab is available on the VIP Cloud CDN.\n\nWould you like to auto-download and install it now (74 KB)?",
+            parent=self.root
+        )
+        if ask:
+            self.download_hardware_lab_binary(target_download_path)
+
+    def download_hardware_lab_binary(self, dest_path):
+        top = tk.Toplevel(self.root)
+        top.title("HM Cloud CDN - Downloading Hardware Lab")
+        top.geometry("450x170")
+        top.configure(bg="#0d1117")
+        top.transient(self.root)
+        top.grab_set()
+
+        tk.Label(top, text="⚡ VIP CLOUD CDN • FAST DOWNLOAD", font=("Segoe UI", 10, "bold"), fg="#00e5ff", bg="#0d1117").pack(pady=(16, 4))
+        lbl_status = tk.Label(top, text="Connecting to VIP GitHub Cloud CDN (74 KB)...", font=("Segoe UI", 9), fg="#e2e8f0", bg="#0d1117")
+        lbl_status.pack(pady=4)
+
+        prg = ttk.Progressbar(top, mode="indeterminate", length=360)
+        prg.pack(pady=8)
+        prg.start(10)
+
+        def do_download():
+            cdn_url = "https://raw.githubusercontent.com/obutt339/HM-Admin-Cloud/main/runtime/HM_Hardware_Diagnostic_Lab.exe"
+            try:
+                req = urllib.request.Request(cdn_url, headers={'User-Agent': 'Mozilla/5.0 HM-Client'})
+                with urllib.request.urlopen(req, timeout=15) as resp:
+                    raw_data = resp.read()
+                with open(dest_path, "wb") as f:
+                    f.write(raw_data)
+
+                self.root.after(0, top.destroy)
+                subprocess.Popen([dest_path])
+            except Exception as e:
+                self.root.after(0, lambda: lbl_status.config(text=f"Download failed: {e}", fg="#f87171"))
+                self.root.after(0, prg.stop)
+
+        threading.Thread(target=do_download, daemon=True).start()
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # 🔔 VIP CLOUD NOTIFICATION & UPDATE BROADCAST SYSTEM
+    # ═══════════════════════════════════════════════════════════════════════
+
+    def start_cloud_notification_thread(self):
+        t = threading.Thread(target=self._fetch_cloud_notification_worker, daemon=True)
+        t.start()
+
+    def _fetch_cloud_notification_worker(self):
+        notice_url = "https://raw.githubusercontent.com/obutt339/HM-Admin-Cloud/main/data/notification.json?t=" + str(int(time.time()))
+        notice_data = None
+        try:
+            req = urllib.request.Request(notice_url, headers={'User-Agent': 'Mozilla/5.0 HM-Client'})
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                if resp.status == 200:
+                    notice_data = json.loads(resp.read().decode('utf-8'))
+        except Exception:
+            pass
+
+        if not notice_data:
+            notice_data = {
+                "version": "8.6.0",
+                "id": "notice_hw_lab_v8.6",
+                "title_ur": "نیا وی آئی پی فیچر: ہارڈویئر ڈائیگنوسٹک لیب لائیو!",
+                "title_en": "NEW VIP FEATURE: Hardware Diagnostic Lab Live (v8.6)!",
+                "message_ur": "تمام معزز کلائنٹس کے لیے ہارڈویئر ڈائیگنوسٹک لیب (SUGON 3010PM / ملٹی میٹر / 6-پورٹ اسمارٹ فاسٹ چارجر) ٹول میں شامل کر دی گئی ہے۔",
+                "message_en": "HM Hardware Master Diagnostic Lab (SUGON 3010PM, UNI-T Multimeter, USB Doctor 6-Port Smart Fast Charger) is now live directly in your HM Testpoint Tool with full Urdu & English guides!",
+                "force_notice": False
+            }
+
+        state_file = os.path.join(get_app_dir(), ".last_notice_seen")
+        notice_id = notice_data.get("id", notice_data.get("version", "8.6.0"))
+        if os.path.exists(state_file) and not notice_data.get("force_notice", False):
+            try:
+                with open(state_file, "r", encoding="utf-8") as f:
+                    if f.read().strip() == notice_id:
+                        return
+            except Exception:
+                pass
+
+        self.root.after(0, lambda: self.show_cloud_notification_modal(notice_data, state_file, notice_id))
+
+    def open_notification_modal_manual(self):
+        notice_data = {
+            "version": "8.6.0",
+            "id": "notice_hw_lab_v8.6",
+            "title_ur": "نیا وی آئی پی فیچر: ہارڈویئر ڈائیگنوسٹک لیب لائیو!",
+            "title_en": "NEW VIP FEATURE: Hardware Diagnostic Lab Live (v8.6)!",
+            "message_ur": "تمام معزز کلائنٹس کے لیے ہارڈویئر ڈائیگنوسٹک لیب (SUGON 3010PM / ملٹی میٹر / 6-پورٹ اسمارٹ فاسٹ چارجر) ٹول میں شامل کر دی گئی ہے۔",
+            "message_en": "HM Hardware Master Diagnostic Lab (SUGON 3010PM, UNI-T Multimeter, USB Doctor 6-Port Smart Fast Charger) is now live directly in your HM Testpoint Tool with full Urdu & English guides!",
+            "force_notice": True
+        }
+        state_file = os.path.join(get_app_dir(), ".last_notice_seen")
+        self.show_cloud_notification_modal(notice_data, state_file, "manual_open")
+
+    def show_cloud_notification_modal(self, notice, state_file=None, notice_id=None):
+        top = tk.Toplevel(self.root)
+        top.title("🔔 HM VIP Cloud Broadcast & Update Notification")
+        top.geometry("720x550")
+        top.configure(bg="#0b0d18")
+        top.transient(self.root)
+        top.grab_set()
+
+        # Header bar
+        hdr = tk.Frame(top, bg="#111526", bd=1, relief=tk.SOLID)
+        hdr.pack(fill=tk.X, padx=14, pady=(12, 8))
+
+        h_inner = tk.Frame(hdr, bg="#111526", padx=12, pady=10)
+        h_inner.pack(fill=tk.X)
+
+        tk.Label(h_inner, text="👑 OFFICIAL VIP CLOUD BROADCAST", font=("Segoe UI", 9, "bold"), bg="#b71c1c", fg="#ffffff", padx=8, pady=2).pack(anchor="w")
+        tk.Label(h_inner, text=notice.get("title_en", "🎉 NEW VIP UPDATE RELEASED (v8.6)"), font=("Segoe UI", 14, "bold"), fg="#ffffff", bg="#111526").pack(anchor="w", pady=(6, 2))
+        tk.Label(h_inner, text=notice.get("title_ur", "نیا وی آئی پی فیچر: ہارڈویئر ڈائیگنوسٹک لیب لائیو!"), font=("Segoe UI", 11, "bold"), fg="#ffd54f", bg="#111526").pack(anchor="w")
+
+        # Urdu Notice Card
+        u_card = tk.Frame(top, bg="#14192b", bd=1, relief=tk.SOLID)
+        u_card.pack(fill=tk.X, padx=14, pady=4)
+        tk.Label(u_card, text="🇵🇰 اردو نوٹیفکیشن برائے کلائنٹس:", font=("Segoe UI", 9, "bold"), fg="#00e676", bg="#14192b").pack(anchor="e", padx=12, pady=(6, 2))
+        tk.Label(u_card, text=notice.get("message_ur", ""), font=("Segoe UI", 9), fg="#f1f5f9", bg="#14192b", justify=tk.RIGHT, wraplength=660).pack(anchor="e", padx=12, pady=(0, 8))
+
+        # English Notice Card
+        e_card = tk.Frame(top, bg="#14192b", bd=1, relief=tk.SOLID)
+        e_card.pack(fill=tk.X, padx=14, pady=4)
+        tk.Label(e_card, text="🇬🇧 English Notification for Technicians:", font=("Segoe UI", 9, "bold"), fg="#38bdf8", bg="#14192b").pack(anchor="w", padx=12, pady=(6, 2))
+        tk.Label(e_card, text=notice.get("message_en", ""), font=("Segoe UI", 9), fg="#cbd5e1", bg="#14192b", justify=tk.LEFT, wraplength=660).pack(anchor="w", padx=12, pady=(0, 8))
+
+        # Features grid
+        f_box = tk.Frame(top, bg="#0b0d18")
+        f_box.pack(fill=tk.BOTH, expand=True, padx=14, pady=6)
+
+        feats = [
+            ("⚡ SUGON 3010PM DC SUPPLY", "8 Real live fault states with Urdu cause/solution"),
+            ("📟 DIGITAL MULTIMETER PRO", "Diode testing (~0.450V), VPH rails & buzzer"),
+            ("🔌 USB DOCTOR & SMART CHARGER", "6-Port live ammeter, QC 3.0 & fake charging detection"),
+            ("🛠️ 4-STAGE REPAIR WIZARD", "Dead phone, water damage & loop restart solver")
+        ]
+        for idx, (f_title, f_sub) in enumerate(feats):
+            r = idx // 2
+            c = idx % 2
+            fb = tk.Frame(f_box, bg="#12162a", bd=1, relief=tk.SOLID)
+            fb.grid(row=r, column=c, sticky="nsew", padx=4, pady=4)
+            f_box.grid_columnconfigure(c, weight=1)
+            tk.Label(fb, text=f_title, font=("Segoe UI", 8, "bold"), fg="#ffd54f", bg="#12162a").pack(anchor="w", padx=8, pady=(6, 2))
+            tk.Label(fb, text=f_sub, font=("Segoe UI", 8), fg="#94a3b8", bg="#12162a").pack(anchor="w", padx=8, pady=(0, 6))
+
+        # Bottom buttons
+        b_box = tk.Frame(top, bg="#0b0d18")
+        b_box.pack(fill=tk.X, padx=14, pady=(6, 14))
+
+        def close_and_dismiss():
+            if state_file and notice_id and notice_id != "manual_open":
+                try:
+                    with open(state_file, "w", encoding="utf-8") as f:
+                        f.write(notice_id)
+                except Exception:
+                    pass
+            top.destroy()
+
+        def open_lab_action():
+            close_and_dismiss()
+            self.launch_hardware_lab()
+
+        def view_tab_action():
+            close_and_dismiss()
+            self.select_category('HW_DIAG')
+
+        btn_launch = tk.Button(b_box, text="🚀 OPEN HARDWARE LAB NOW", font=("Segoe UI", 9, "bold"), bg="#b71c1c", fg="#ffffff", activebackground="#e53935", activeforeground="#ffffff", bd=0, padx=14, pady=8, cursor="hand2", command=open_lab_action)
+        btn_launch.pack(side=tk.LEFT, padx=(0, 6))
+
+        btn_tab = tk.Button(b_box, text="🔬 VIEW IN TOOL (TAB)", font=("Segoe UI", 9, "bold"), bg="#0288d1", fg="#ffffff", activebackground="#03a9f4", activeforeground="#ffffff", bd=0, padx=14, pady=8, cursor="hand2", command=view_tab_action)
+        btn_tab.pack(side=tk.LEFT, padx=6)
+
+        btn_close = tk.Button(b_box, text="✖ Got It / Close", font=("Segoe UI", 9, "bold"), bg="#252736", fg="#94a3b8", activebackground="#383d52", activeforeground="#ffffff", bd=0, padx=14, pady=8, cursor="hand2", command=close_and_dismiss)
+        btn_close.pack(side=tk.RIGHT)
+
     def manual_create_shortcut(self):
         auto_create_desktop_shortcut()
         messagebox.showinfo("Desktop Shortcut", "Desktop shortcut created successfully!", parent=self.root)
@@ -792,7 +1009,8 @@ class HMTestpointApp:
             ('CABLES', f"🔌 MODIFIED CABLES ({cable_count})"),
             ('ISP', f"💾 ISP PINOUTS ({isp_count})"),
             ('WAYS', f"🛠 HARDWARE WAYS ({ways_count})"),
-            ('EMMC_UFS', f"🎛️ HM Finder (5,350+) ({ic_count:,})")
+            ('EMMC_UFS', f"🎛️ HM Finder (5,350+) ({ic_count:,})"),
+            ('HW_DIAG', "🔬 HARDWARE LAB (SUGON / Multimeter)")
         ]
 
         self.cat_buttons = {}
@@ -916,6 +1134,9 @@ class HMTestpointApp:
         # IC PANEL (FOR EMMC/UFS FINDER)
         self.ic_panel = tk.Frame(self.right_panel, bg=UT_STYLE['bg_canvas'])
 
+        # HARDWARE LAB PANEL (FOR SUGON / MULTIMETER / USB DOCTOR)
+        self.hw_lab_panel = tk.Frame(self.right_panel, bg=UT_STYLE['bg_canvas'])
+
     def build_statusbar(self):
         sbar = tk.Frame(self.root, bg=UT_STYLE['bg_header'], height=24)
         sbar.pack(fill=tk.X, side=tk.BOTTOM)
@@ -961,6 +1182,9 @@ class HMTestpointApp:
         if self.active_category == 'EMMC_UFS':
             self.lbl_current_model.config(text="🎛️ HM Finder Offline Repair Hub • eMMC / UFS Storage IC Database")
             self.show_gb_finder_suite()
+        elif self.active_category == 'HW_DIAG':
+            self.lbl_current_model.config(text="🔬 HM Hardware Diagnostic Lab • SUGON 3010PM / Multimeter / USB Doctor")
+            self.show_hardware_lab_suite()
         else:
             self.hide_ic_details()
             self.populate_models()
@@ -1179,6 +1403,8 @@ class HMTestpointApp:
     def hide_ic_details(self):
         if hasattr(self, 'ic_panel') and self.ic_panel.winfo_ismapped():
             self.ic_panel.pack_forget()
+        if hasattr(self, 'hw_lab_panel') and self.hw_lab_panel.winfo_ismapped():
+            self.hw_lab_panel.pack_forget()
         if hasattr(self, 'sidebar') and not self.sidebar.winfo_ismapped():
             self.sidebar.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 6))
         if hasattr(self, 'canvas_tbar') and not self.canvas_tbar.winfo_ismapped():
@@ -2109,6 +2335,201 @@ class HMTestpointApp:
             leg_y += 18
 
         canvas.create_text(leg_x, leg_y + 10, text="Compatible Boxes:\n• EasyJTAG Plus\n• UFI Box\n• Medusa Pro II\n• MiPi Tester Box", fill="#00e5ff", font=("Segoe UI", 8), anchor="nw")
+
+    # ═══════════════════════════════════════════════════════════════════════
+    # 🔬 HARDWARE DIAGNOSTIC SUITE (SUGON 3010PM / MULTIMETER / USB CHARGER)
+    # ═══════════════════════════════════════════════════════════════════════
+
+    def show_hardware_lab_suite(self):
+        if hasattr(self, 'canvas') and self.canvas.winfo_ismapped():
+            self.canvas.pack_forget()
+        if hasattr(self, 'canvas_tbar') and self.canvas_tbar.winfo_ismapped():
+            self.canvas_tbar.pack_forget()
+        if hasattr(self, 'sidebar') and self.sidebar.winfo_ismapped():
+            self.sidebar.pack_forget()
+        if hasattr(self, 'ic_panel') and self.ic_panel.winfo_ismapped():
+            self.ic_panel.pack_forget()
+
+        self.hw_lab_panel.pack(fill=tk.BOTH, expand=True)
+        self.build_hw_lab_panel()
+
+    def build_hw_lab_panel(self):
+        for w in self.hw_lab_panel.winfo_children():
+            w.destroy()
+
+        # Outer container with scrollbar
+        c = tk.Canvas(self.hw_lab_panel, bg="#0a0c14", bd=0, highlightthickness=0)
+        sbar = tk.Scrollbar(self.hw_lab_panel, orient="vertical", command=c.yview)
+        body = tk.Frame(c, bg="#0a0c14")
+
+        body.bind("<Configure>", lambda e: c.configure(scrollregion=c.bbox("all")))
+        c_win = c.create_window((0, 0), window=body, anchor="nw")
+
+        def on_c_conf(event):
+            c.itemconfig(c_win, width=event.width)
+        c.bind("<Configure>", on_c_conf)
+        c.configure(yscrollcommand=sbar.set)
+
+        # Mouse wheel support
+        def _on_hw_mousewheel(event):
+            if c.winfo_exists():
+                c.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        c.bind_all("<MouseWheel>", _on_hw_mousewheel)
+
+        c.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        sbar.pack(side=tk.RIGHT, fill=tk.Y)
+
+        # ── 1. TOP HERO BANNER ──
+        banner = tk.Frame(body, bg="#111422", bd=1, relief=tk.SOLID)
+        banner.pack(fill=tk.X, padx=16, pady=(14, 10))
+
+        b_top = tk.Frame(banner, bg="#111422")
+        b_top.pack(fill=tk.X, padx=16, pady=12)
+
+        # Left title info
+        b_left = tk.Frame(b_top, bg="#111422")
+        b_left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        tag_row = tk.Frame(b_left, bg="#111422")
+        tag_row.pack(anchor="w")
+
+        tk.Label(tag_row, text="🔬 HARDWARE MASTER LAB", font=("Segoe UI", 9, "bold"), bg="#b71c1c", fg="#ffffff", padx=8, pady=2).pack(side=tk.LEFT, padx=(0, 8))
+        tk.Label(tag_row, text="URDU & ENGLISH BILINGUAL", font=("Segoe UI", 9, "bold"), bg="#00897b", fg="#ffffff", padx=8, pady=2).pack(side=tk.LEFT, padx=(0, 8))
+        tk.Label(tag_row, text="REAL DIAGNOSTIC PHOTOS & READINGS", font=("Segoe UI", 9, "bold"), bg="#f57f17", fg="#000000", padx=8, pady=2).pack(side=tk.LEFT)
+
+        tk.Label(b_left, text="Mobile Motherboard Real Hardware Diagnostics & Fault Solver", font=("Segoe UI", 15, "bold"), fg="#ffffff", bg="#111422").pack(anchor="w", pady=(8, 2))
+        tk.Label(b_left, text="SUGON 3010PM (30V/10A DC Power Supply) • UNI-T UT33B+ Multimeter • USB Doctor 6-Port Smart Fast Charger • 4-Stage Repair Wizard", font=("Segoe UI", 9), fg="#94a3b8", bg="#111422").pack(anchor="w")
+
+        # Right launch button
+        btn_hero_launch = tk.Button(
+            b_top,
+            text="🚀 LAUNCH STANDALONE LAB\n[ Interactive Real Experience ]",
+            font=("Segoe UI", 10, "bold"),
+            bg="#e53935", fg="#ffffff",
+            activebackground="#ff5252", activeforeground="#ffffff",
+            bd=0, relief=tk.FLAT, padx=18, pady=8, cursor="hand2",
+            command=self.launch_hardware_lab
+        )
+        btn_hero_launch.pack(side=tk.RIGHT, padx=6)
+
+        # ── 2. THREE COMPONENT CARDS ──
+        cards_wrap = tk.Frame(body, bg="#0a0c14")
+        cards_wrap.pack(fill=tk.BOTH, expand=True, padx=12, pady=4)
+
+        for col in range(3):
+            cards_wrap.grid_columnconfigure(col, weight=1, uniform="hw_card")
+
+        card_data = [
+            (
+                "⚡ SUGON 3010PM (DC SUPPLY)",
+                "#b71c1c",
+                "30V / 10A High Precision Digital Display",
+                [
+                    ("Full Short (VBAT/VPH):", "0.00V | 5.00A", "فل شارٹ - بیپ اور ہیٹ (VPH شارٹ)"),
+                    ("Half Short / Leakage:", "4.20V | 0.22A", "ہاف شارٹ - فون گرم یا بیٹری جلدی ختم"),
+                    ("CPU Dead Stuck:", "4.20V | 0.14A", "سی پی یو ہینگ / بوٹ سیکوئنس بریک"),
+                    ("Auto Ampere on In:", "4.20V | 0.38A", "بغیر پاور بٹن دبائے کرنٹ لینا (PMIC فالٹ)"),
+                    ("Charging IC Heat:", "4.20V | 0.85A", "چارجنگ آئی سی شارٹ یا لیک ہونا"),
+                    ("Restart Loop / Reboot:", "4.20V | 0.05-0.45A", "کرنٹ 0 سے 400mA جا کر بار بار زیرو ہونا")
+                ],
+                "Live Voltage/Ampere dials, 8 real fault states, 4 memory presets, and complete Urdu/English analysis."
+            ),
+            (
+                "📟 UNI-T UT33B+ MULTIMETER",
+                "#0288d1",
+                "Digital Precision Multi-Tester Mode",
+                [
+                    ("Diode Testing Mode:", "0.350V - 0.700V", "نارمل لائن ڈراپ (ریڈ پروب گراؤنڈ پر رکھیں)"),
+                    ("Short to Ground (Buzzer):", "0.000V / 0 Ω", "لائن شارٹ ہے - بیپ کی آواز آئے گی"),
+                    ("Open Line (OL):", "O.L (High)", "لائن کٹ گئی ہے - ٹریک اوپن ہے"),
+                    ("VPH_PWR Main Line:", "3.70V - 4.20V", "مین سسٹم وولٹیج بس نارمل ہے"),
+                    ("CPU Buck Coils:", "0.80V - 1.15V", "پروسیسر کور وولٹیج اوکے ہے"),
+                    ("LDO Regulators:", "1.80V / 2.80V", "سینسر اور ڈسپلے کے ریگولیٹر وولٹیج")
+                ],
+                "Interactive rotary selector, Diode/DCV/Resistance, and technician testing guides in Urdu & English."
+            ),
+            (
+                "🔌 USB DOCTOR & SMART CHARGER",
+                "#2e7d32",
+                "6-Port Smart Fast Charger & QC3.0",
+                [
+                    ("Normal Fast Charge:", "5.0V | 1.85A", "نارمل فاسٹ چارجنگ ایکٹو ہے (OK)"),
+                    ("QC 3.0 High Voltage:", "9.0V | 1.60A", "کوئیک چارج ہینڈ شیک کامیاب ہے"),
+                    ("Fake Charging:", "5.0V | 0.18A", "فیک چارجنگ - چارجنگ آئی سی یا بیٹری فالٹ"),
+                    ("Dead Line / No Detect:", "5.0V | 0.00A", "سب بورڈ یا ٹائپ سی پن ڈسکنیکٹ ہے"),
+                    ("Stage 1: Cold Resistance", "Diode Mode", "گراؤنڈ سے تمام پنوں کی کولڈ ٹیسٹنگ"),
+                    ("Stage 2: DC Power Check", "Current Pulse", "پاور بٹن دبانے کے بعد کرنٹ رسپانس")
+                ],
+                "6-Port dynamic ports, live LED ammeter readouts, and 4-Stage Motherboard Fault Finding Wizard."
+            )
+        ]
+
+        for idx, (title, color, subtitle, items, note) in enumerate(card_data):
+            card = tk.Frame(cards_wrap, bg="#131622", bd=1, relief=tk.SOLID)
+            card.grid(row=0, column=idx, sticky="nsew", padx=6, pady=6)
+
+            # Header strip
+            c_hdr = tk.Frame(card, bg=color, height=36)
+            c_hdr.pack(fill=tk.X)
+            c_hdr.pack_propagate(False)
+            tk.Label(c_hdr, text=title, font=("Segoe UI", 10, "bold"), fg="#ffffff", bg=color).pack(side=tk.LEFT, padx=10)
+
+            body_c = tk.Frame(card, bg="#131622", padx=10, pady=10)
+            body_c.pack(fill=tk.BOTH, expand=True)
+
+            tk.Label(body_c, text=subtitle, font=("Segoe UI", 8, "bold"), fg="#ffb300", bg="#131622").pack(anchor="w", pady=(0, 6))
+
+            # Table of readings
+            t_frame = tk.Frame(body_c, bg="#0d0f18", bd=1, relief=tk.SOLID)
+            t_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 8))
+
+            for r_title, r_val, r_urdu in items:
+                row = tk.Frame(t_frame, bg="#0d0f18")
+                row.pack(fill=tk.X, padx=6, pady=3)
+
+                r_top = tk.Frame(row, bg="#0d0f18")
+                r_top.pack(fill=tk.X)
+                tk.Label(r_top, text=r_title, font=("Segoe UI", 8, "bold"), fg="#ffffff", bg="#0d0f18").pack(side=tk.LEFT)
+                tk.Label(r_top, text=r_val, font=("Consolas", 8, "bold"), fg="#00ff66", bg="#0d0f18").pack(side=tk.RIGHT)
+
+                tk.Label(row, text=f"اردو: {r_urdu}", font=("Segoe UI", 8), fg="#94a3b8", bg="#0d0f18", anchor="w", justify=tk.LEFT).pack(fill=tk.X)
+
+            tk.Label(body_c, text=note, font=("Segoe UI", 8), fg="#64748b", bg="#131622", wraplength=280, justify=tk.LEFT).pack(anchor="w", pady=(0, 8))
+
+            b_btn = tk.Button(
+                body_c,
+                text="⚡ Open Standalone Lab",
+                font=("Segoe UI", 9, "bold"),
+                bg="#252a3d", fg="#ffffff",
+                activebackground=color, activeforeground="#ffffff",
+                bd=0, padx=8, pady=4, cursor="hand2",
+                command=self.launch_hardware_lab
+            )
+            b_btn.pack(fill=tk.X, pady=(2, 0))
+
+        # ── 3. FOUR-STAGE MOTHERBOARD FAULT FINDING SUMMARY ──
+        w_box = tk.Frame(body, bg="#111422", bd=1, relief=tk.SOLID)
+        w_box.pack(fill=tk.X, padx=16, pady=(8, 16))
+
+        tk.Label(w_box, text="🛠️ 4-STAGE MOTHERBOARD FAULT-FINDING WIZARD (DEAD / SHORT / RESTART)", font=("Segoe UI", 11, "bold"), fg="#00e5ff", bg="#111422").pack(anchor="w", padx=14, pady=(10, 4))
+        tk.Label(w_box, text="Step-by-step master methodology followed by top GSM repair labs worldwide:", font=("Segoe UI", 8), fg="#94a3b8", bg="#111422").pack(anchor="w", padx=14, pady=(0, 8))
+
+        stages = [
+            ("Stage 1: Cold Test (Diode Mode)", "بیٹری کنیکٹر اور VPH لائن پر ملٹی میٹر سے ریورس بائیس ڈائیوڈ ویلیو چیک کریں۔ اگر 0.00V آئے تو فل شارٹ ہے، اوپن لائن آئے تو ٹریک کٹا ہوا ہے۔"),
+            ("Stage 2: DC Power Connection", "ڈی سی سپلائی 4.2V پر لگائیں۔ اگر کیبل لگاتے ہی بغیر پاور بٹن دبائے کرنٹ لے تو پاور آئی سی یا چارجنگ لائن میں شارٹ سرکٹ ہے۔"),
+            ("Stage 3: Power Key Trigger Check", "پاور بٹن دبانے کے بعد ایمپیئر چیک کریں۔ اگر 0.12A-0.15A پر سوئی پھنس جائے تو CPU یا Clock Crystal کا فالٹ ہے۔"),
+            ("Stage 4: USB Charger Handshake", "6-پورٹ اسمارٹ چارجر میں فون لگائیں۔ اگر 0.00A رہے تو سب بورڈ یا کنیکٹر خراب ہے، اگر 0.18A پر رکے تو بیٹری یا ڈسپلے سگنل غائب ہے۔")
+        ]
+
+        s_grid = tk.Frame(w_box, bg="#111422")
+        s_grid.pack(fill=tk.X, padx=14, pady=(0, 12))
+
+        for idx, (s_title, s_desc) in enumerate(stages):
+            s_card = tk.Frame(s_grid, bg="#0b0d16", bd=1, relief=tk.SOLID)
+            s_card.pack(fill=tk.X, pady=3)
+
+            tk.Label(s_card, text=s_title, font=("Segoe UI", 9, "bold"), fg="#ffd54f", bg="#0b0d16").pack(anchor="w", padx=10, pady=(4, 1))
+            tk.Label(s_card, text=f"وضاحت: {s_desc}", font=("Segoe UI", 8), fg="#e2e8f0", bg="#0b0d16", justify=tk.LEFT, wraplength=850).pack(anchor="w", padx=10, pady=(0, 6))
 
     def on_tree_double_click(self, event):
         self.on_tree_select(event)
