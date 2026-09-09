@@ -617,17 +617,61 @@ class HMTestpointApp:
                         seen_ways_keys[target_brand].add(dkey)
                         self.data_ways[target_brand].append({'name': disp, 'path': ipath, 'brand': target_brand})
 
-        bundled_tp_data = get_resource_path("tp_data")
-        if os.path.exists(bundled_tp_data):
-            for f in os.listdir(bundled_tp_data):
-                fp = os.path.join(bundled_tp_data, f)
-                if os.path.isfile(fp) and f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.bmp')):
-                    fn = f.lower()
-                    if 'ways' in fn or 'issue' in fn or 'schematic' in fn or 'jumper' in fn:
-                        disp = os.path.splitext(f)[0]
-                        target_brand = 'OPPO' if 'oppo' in fn else ('SAMSUNG' if ('samsung' in fn or 'j6' in fn) else 'UNIVERSAL & CPU WAYS')
-                        if not any(x['name'] == disp for x in self.data_ways[target_brand]):
-                            self.data_ways[target_brand].append({'name': disp, 'path': fp, 'brand': target_brand})
+        # 4. CLOUD STORAGE & SYNCED DOWNLOADS DYNAMIC LOADER
+        cloud_storage_dirs = [
+            os.path.join(get_app_dir(), "cloud_storage"),
+            os.path.join(os.path.dirname(os.path.abspath(__file__)), "cloud_storage"),
+            os.path.join(get_app_dir(), "tp_data"),
+            get_resource_path("tp_data")
+        ]
+        for cdir in cloud_storage_dirs:
+            if os.path.exists(cdir):
+                for root, dirs, files in os.walk(cdir):
+                    for f in sorted(files):
+                        if f.lower().endswith(('.png', '.jpg', '.jpeg', '.webp', '.bmp')):
+                            fp = os.path.join(root, f)
+                            fn = f.lower()
+                            is_isp = "isp" in fn or "isp" in root.lower()
+                            is_ways = "ways" in fn or "way" in fn or "solution" in fn or "jumper" in fn or "done" in fn or "hardware" in root.lower()
+                            is_cable = "cable" in fn or "pico" in fn or "cable" in root.lower()
+
+                            target_brand = "UNIVERSAL & CPU WAYS" if (is_ways or is_cable) else "OTHER"
+                            for b_cand in BRAND_CONFIG.keys():
+                                if b_cand.lower() in fn or b_cand.lower() in root.lower():
+                                    target_brand = b_cand
+                                    break
+
+                            disp = self.clean_name(f, target_brand)
+                            dkey = self.get_dedup_key(disp, target_brand)
+
+                            if is_cable:
+                                if dkey not in seen_cables_keys:
+                                    seen_cables_keys.add(dkey)
+                                    self.data_cables.append({'name': disp, 'path': fp})
+                            elif is_isp:
+                                if target_brand not in self.data_isp:
+                                    self.data_isp[target_brand] = []
+                                    seen_isp_keys[target_brand] = set()
+                                if dkey not in seen_isp_keys.get(target_brand, set()):
+                                    if target_brand not in seen_isp_keys: seen_isp_keys[target_brand] = set()
+                                    seen_isp_keys[target_brand].add(dkey)
+                                    self.data_isp[target_brand].append({'name': disp, 'raw_name': f, 'path': fp, 'brand': target_brand})
+                            elif is_ways:
+                                if target_brand not in self.data_ways:
+                                    self.data_ways[target_brand] = []
+                                    seen_ways_keys[target_brand] = set()
+                                if dkey not in seen_ways_keys.get(target_brand, set()):
+                                    if target_brand not in seen_ways_keys: seen_ways_keys[target_brand] = set()
+                                    seen_ways_keys[target_brand].add(dkey)
+                                    self.data_ways[target_brand].append({'name': disp, 'path': fp, 'brand': target_brand})
+                            else:
+                                if target_brand not in self.data_tp:
+                                    self.data_tp[target_brand] = []
+                                    seen_tp_keys[target_brand] = set()
+                                if dkey not in seen_tp_keys.get(target_brand, set()):
+                                    if target_brand not in seen_tp_keys: seen_tp_keys[target_brand] = set()
+                                    seen_tp_keys[target_brand].add(dkey)
+                                    self.data_tp[target_brand].append({'name': disp, 'raw_name': f, 'path': fp, 'brand': target_brand})
 
         # 5. EMMC & UFS STORAGE IC DATABASE (5,350+ Chips)
         self.data_ic = []
